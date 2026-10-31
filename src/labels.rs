@@ -16,7 +16,9 @@ impl Action {
         } else if trimmed == "keep" || trimmed == "nil" || trimmed == "audio" {
             Ok(Action::Keep)
         } else if let Some(speed_str) = trimmed.strip_prefix("speed:") {
-            let speed = speed_str.parse::<f64>().map_err(|e| format!("Invalid speed '{}': {}", speed_str, e))?;
+            let speed = speed_str
+                .parse::<f64>()
+                .map_err(|e| format!("Invalid speed '{}': {}", speed_str, e))?;
             Ok(Action::Speed(speed))
         } else if let Ok(speed) = trimmed.parse::<f64>() {
             Ok(Action::Speed(speed))
@@ -46,8 +48,8 @@ pub struct LabelManager {
 impl LabelManager {
     pub fn new() -> Self {
         let mut actions = HashMap::new();
-        actions.insert(0, Action::Cut);   // Label 0 is cut by default
-        actions.insert(1, Action::Keep);  // Label 1 is keep by default
+        actions.insert(0, Action::Cut); // Label 0 is cut by default
+        actions.insert(1, Action::Keep); // Label 1 is keep by default
         Self { actions }
     }
 

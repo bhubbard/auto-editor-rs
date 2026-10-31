@@ -19,7 +19,10 @@ pub fn export_shotcut(timeline: &Timeline) -> String {
         "  <producer id=\"producer0\" in=\"0\" out=\"{}\">\n",
         timeline.total_frames
     ));
-    xml.push_str(&format!("    <property name=\"resource\">{}</property>\n", file_path));
+    xml.push_str(&format!(
+        "    <property name=\"resource\">{}</property>\n",
+        file_path
+    ));
     xml.push_str("  </producer>\n");
     xml.push_str("  <playlist id=\"main_bin\">\n");
     xml.push_str("    <entry producer=\"producer0\" />\n");

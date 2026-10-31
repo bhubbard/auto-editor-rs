@@ -33,3 +33,10 @@ path = "src/main.rs"
 [lib]
 name = "auto_editor"
 path = "src/lib.rs"
+
+[profile.dev]
+debug = 0
+
+[profile.test]
+debug = 0
+

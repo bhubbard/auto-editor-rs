@@ -29,6 +29,25 @@ impl Default for RenderOptions {
 pub struct RenderEngine;
 
 impl RenderEngine {
+    /// Decomposes an arbitrary playback speed multiplier into a valid chain of FFmpeg `atempo`
+    /// filters, each constrained to `[0.5, 2.0]` (e.g. `4.0` -> `"atempo=2.0000,atempo=2.0000"`).
+    pub fn build_atempo_chain(speed: f64) -> String {
+        let mut rem = speed.clamp(0.05, 100.0);
+        let mut stages = Vec::new();
+        while rem > 2.0 + 1e-6 {
+            stages.push("atempo=2.0000".to_string());
+            rem /= 2.0;
+        }
+        while rem < 0.5 - 1e-6 {
+            stages.push("atempo=0.5000".to_string());
+            rem /= 0.5;
+        }
+        if (rem - 1.0).abs() > 1e-4 || stages.is_empty() {
+            stages.push(format!("atempo={:.4}", rem));
+        }
+        stages.join(",")
+    }
+
     /// Builds an FFmpeg command with a concat filter or filter_complex that applies
     /// cuts and speeds across all kept chunks.
     pub fn build_ffmpeg_render_command(
@@ -69,9 +88,10 @@ impl RenderEngine {
                     start_sec, end_sec, i
                 )
             } else {
+                let atempo_chain = Self::build_atempo_chain(speed);
                 format!(
-                    "[0:a]atrim=start={:.4}:end={:.4},asetpts=PTS-STARTPTS,atempo={:.4}[a{}]",
-                    start_sec, end_sec, speed, i
+                    "[0:a]atrim=start={:.4}:end={:.4},asetpts=PTS-STARTPTS,{}[a{}]",
+                    start_sec, end_sec, atempo_chain, i
                 )
             };
 
@@ -141,9 +161,7 @@ impl RenderEngine {
             bail!("Empty FFmpeg command");
         }
 
-        let status = Command::new(&args[0])
-            .args(&args[1..])
-            .status()?;
+        let status = Command::new(&args[0]).args(&args[1..]).status()?;
 
         if !status.success() {
             bail!("FFmpeg exited with status: {}", status);
@@ -164,10 +182,7 @@ mod tests {
             "input.mp4".to_string(),
             Timebase::fps_30(),
             60,
-            vec![
-                Chunk::new(0, 30, 1.0),
-                Chunk::new(30, 60, 2.0),
-            ],
+            vec![Chunk::new(0, 30, 1.0), Chunk::new(30, 60, 2.0)],
         );
 
         let opts = RenderOptions::default();
@@ -193,5 +208,24 @@ mod tests {
         assert!(script.contains("file 'input.mp4'"));
         assert!(script.contains("inpoint 0.0000"));
         assert!(script.contains("outpoint 1.0000"));
+    }
+
+    #[test]
+    fn test_atempo_filter_chaining() {
+        // 4.0x speed requires two 2.0x stages
+        assert_eq!(
+            RenderEngine::build_atempo_chain(4.0),
+            "atempo=2.0000,atempo=2.0000"
+        );
+        // 3.0x speed requires 2.0x followed by 1.5x
+        assert_eq!(
+            RenderEngine::build_atempo_chain(3.0),
+            "atempo=2.0000,atempo=1.5000"
+        );
+        // 0.25x slow-motion requires two 0.5x stages
+        assert_eq!(
+            RenderEngine::build_atempo_chain(0.25),
+            "atempo=0.5000,atempo=0.5000"
+        );
     }
 }

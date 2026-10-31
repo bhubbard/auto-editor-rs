@@ -8,7 +8,10 @@ pub fn export_fcpxml(timeline: &Timeline) -> String {
         .and_then(|s| s.to_str())
         .unwrap_or("media.mp4");
     let file_url = format!("file://{}", source_path.display());
-    let _fps_ratio = format!("{}/1001s", (timeline.timebase.as_f64() * 1001.0).round() as i64);
+    let _fps_ratio = format!(
+        "{}/1001s",
+        (timeline.timebase.as_f64() * 1001.0).round() as i64
+    );
     let frame_dur = if (timeline.timebase.as_f64() - 29.97).abs() < 0.05 {
         "1001/30000s".to_string()
     } else if (timeline.timebase.as_f64() - 23.976).abs() < 0.05 {
@@ -37,7 +40,10 @@ pub fn export_fcpxml(timeline: &Timeline) -> String {
     xml.push_str("  <library>\n");
     xml.push_str("    <event name=\"Auto-Editor Output\">\n");
     xml.push_str(&format!("      <project name=\"{}\">\n", file_name));
-    xml.push_str(&format!("        <sequence format=\"r1\" duration=\"{}\">\n", total_dur_str));
+    xml.push_str(&format!(
+        "        <sequence format=\"r1\" duration=\"{}\">\n",
+        total_dur_str
+    ));
     xml.push_str("          <spine>\n");
 
     let mut out_offset_frames = 0i64;

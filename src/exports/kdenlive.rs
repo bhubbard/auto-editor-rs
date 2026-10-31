@@ -8,7 +8,9 @@ pub fn export_kdenlive(timeline: &Timeline) -> String {
 
     let mut xml = String::new();
     xml.push_str("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
-    xml.push_str("<mlt version=\"7.1.0\" title=\"Auto-Editor Kdenlive Export\" producer=\"main_bin\">\n");
+    xml.push_str(
+        "<mlt version=\"7.1.0\" title=\"Auto-Editor Kdenlive Export\" producer=\"main_bin\">\n",
+    );
     xml.push_str(&format!(
         "  <profile description=\"HD 1080p\" width=\"1920\" height=\"1080\" progressive=\"1\" frame_rate_num=\"{}\" frame_rate_den=\"1000\" />\n",
         (fps_f64 * 1000.0).round() as i64
@@ -17,7 +19,10 @@ pub fn export_kdenlive(timeline: &Timeline) -> String {
         "  <producer id=\"producer0\" in=\"0\" out=\"{}\">\n",
         timeline.total_frames
     ));
-    xml.push_str(&format!("    <property name=\"resource\">{}</property>\n", file_path));
+    xml.push_str(&format!(
+        "    <property name=\"resource\">{}</property>\n",
+        file_path
+    ));
     xml.push_str("    <property name=\"kdenlive:id\">1</property>\n");
     xml.push_str("  </producer>\n");
     xml.push_str("  <playlist id=\"playlist_track1\">\n");

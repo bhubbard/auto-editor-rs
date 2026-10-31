@@ -54,7 +54,10 @@ impl Timebase {
         let seconds = (rem_seconds - (minutes as f64 * 60.0)).floor() as i64;
         let sub_frames = frames % (fps.round() as i64);
 
-        format!("{:02}:{:02}:{:02}:{:02}", hours, minutes, seconds, sub_frames)
+        format!(
+            "{:02}:{:02}:{:02}:{:02}",
+            hours, minutes, seconds, sub_frames
+        )
     }
 }
 

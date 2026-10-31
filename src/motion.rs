@@ -16,14 +16,23 @@ impl MotionThreshold {
     pub fn parse(s: &str) -> Result<Self, String> {
         let trimmed = s.trim();
         if let Some(pct) = trimmed.strip_suffix('%') {
-            let val = pct.parse::<f64>().map_err(|e| format!("Invalid motion %: {}", e))?;
+            let val = pct
+                .parse::<f64>()
+                .map_err(|e| format!("Invalid motion %: {}", e))?;
             Ok(Self::new(val / 100.0))
-        } else if let Some(db) = trimmed.strip_suffix("dB").or_else(|| trimmed.strip_suffix("db")) {
-            let val = db.parse::<f64>().map_err(|e| format!("Invalid motion dB: {}", e))?;
+        } else if let Some(db) = trimmed
+            .strip_suffix("dB")
+            .or_else(|| trimmed.strip_suffix("db"))
+        {
+            let val = db
+                .parse::<f64>()
+                .map_err(|e| format!("Invalid motion dB: {}", e))?;
             let linear = 10.0f64.powf(val / 20.0);
             Ok(Self::new(linear))
         } else {
-            let val = trimmed.parse::<f64>().map_err(|e| format!("Invalid motion threshold: {}", e))?;
+            let val = trimmed
+                .parse::<f64>()
+                .map_err(|e| format!("Invalid motion threshold: {}", e))?;
             Ok(Self::new(val))
         }
     }

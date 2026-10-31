@@ -34,10 +34,14 @@ impl Margin {
                 .strip_suffix("sec")
                 .or_else(|| trimmed.strip_suffix('s'))
             {
-                let secs = sec_str.parse::<f64>().map_err(|e| format!("Invalid seconds in margin '{}': {}", sec_str, e))?;
+                let secs = sec_str
+                    .parse::<f64>()
+                    .map_err(|e| format!("Invalid seconds in margin '{}': {}", sec_str, e))?;
                 Ok(tb.seconds_to_frames(secs))
             } else {
-                let frames = trimmed.parse::<i64>().map_err(|e| format!("Invalid frame count in margin '{}': {}", trimmed, e))?;
+                let frames = trimmed
+                    .parse::<i64>()
+                    .map_err(|e| format!("Invalid frame count in margin '{}': {}", trimmed, e))?;
                 Ok(frames)
             }
         };
@@ -98,6 +102,30 @@ impl Margin {
             }
         }
     }
+
+    /// Prune short active bursts (e.g. coughs, mic bumps, clicks) that are strictly shorter than `min_clip` frames
+    pub fn prune_short_clips(frames: &mut [bool], min_clip: usize) {
+        let n = frames.len();
+        if n == 0 || min_clip <= 1 {
+            return;
+        }
+
+        let mut i = 0;
+        while i < n {
+            if frames[i] {
+                let start = i;
+                while i < n && frames[i] {
+                    i += 1;
+                }
+                let clip_len = i - start;
+                if clip_len < min_clip {
+                    frames[start..i].fill(false);
+                }
+            } else {
+                i += 1;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -139,5 +167,16 @@ mod tests {
         let mut frames = vec![true, false, false, true, true];
         Margin::bridge_gaps(&mut frames, 2);
         assert_eq!(frames, vec![true, true, true, true, true]);
+    }
+
+    #[test]
+    fn test_prune_short_clips() {
+        let mut frames = vec![false, true, true, false, true, true, true, true, false];
+        Margin::prune_short_clips(&mut frames, 3);
+        // The 2-frame burst at 1..3 is pruned; the 4-frame burst at 4..8 is kept
+        assert_eq!(
+            frames,
+            vec![false, false, false, false, true, true, true, true, false]
+        );
     }
 }

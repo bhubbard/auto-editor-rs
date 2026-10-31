@@ -12,6 +12,10 @@ pub enum EditMethod {
         threshold: MotionThreshold,
         stream: usize,
     },
+    Vad {
+        threshold: f64,
+        stream: usize,
+    },
     Const(bool),
 }
 
@@ -26,10 +30,16 @@ pub enum EditExpr {
 impl EditExpr {
     pub fn parse(input: &str) -> Result<Self, String> {
         let trimmed = input.trim();
-        if trimmed == "1" || trimmed.eq_ignore_ascii_case("all") || trimmed.eq_ignore_ascii_case("true") {
+        if trimmed == "1"
+            || trimmed.eq_ignore_ascii_case("all")
+            || trimmed.eq_ignore_ascii_case("true")
+        {
             return Ok(EditExpr::Method(EditMethod::Const(true)));
         }
-        if trimmed == "0" || trimmed.eq_ignore_ascii_case("none") || trimmed.eq_ignore_ascii_case("false") {
+        if trimmed == "0"
+            || trimmed.eq_ignore_ascii_case("none")
+            || trimmed.eq_ignore_ascii_case("false")
+        {
             return Ok(EditExpr::Method(EditMethod::Const(false)));
         }
 
@@ -37,13 +47,27 @@ impl EditExpr {
         let mut cursor = 0;
         let expr = parse_expression(&tokens, &mut cursor)?;
         if cursor < tokens.len() {
-            return Err(format!("Unexpected token after expression: {:?}", tokens[cursor]));
+            return Err(format!(
+                "Unexpected token after expression: {:?}",
+                tokens[cursor]
+            ));
         }
         Ok(expr)
     }
 
     /// Evaluate expression at a specific frame given audio levels and motion level
     pub fn evaluate(&self, audio_levels: &[f64], motion_level: f64) -> bool {
+        let default_vad = audio_levels.first().copied().unwrap_or(0.0);
+        self.evaluate_with_vad(audio_levels, motion_level, default_vad)
+    }
+
+    /// Evaluate expression at a specific frame given audio levels, motion level, and VAD probability
+    pub fn evaluate_with_vad(
+        &self,
+        audio_levels: &[f64],
+        motion_level: f64,
+        vad_prob: f64,
+    ) -> bool {
         match self {
             EditExpr::Method(m) => match m {
                 EditMethod::Const(b) => *b,
@@ -52,10 +76,15 @@ impl EditExpr {
                     level >= threshold.linear
                 }
                 EditMethod::Motion { threshold, .. } => motion_level >= threshold.threshold,
+                EditMethod::Vad { threshold, .. } => vad_prob >= *threshold,
             },
-            EditExpr::And(exprs) => exprs.iter().all(|e| e.evaluate(audio_levels, motion_level)),
-            EditExpr::Or(exprs) => exprs.iter().any(|e| e.evaluate(audio_levels, motion_level)),
-            EditExpr::Not(inner) => !inner.evaluate(audio_levels, motion_level),
+            EditExpr::And(exprs) => exprs
+                .iter()
+                .all(|e| e.evaluate_with_vad(audio_levels, motion_level, vad_prob)),
+            EditExpr::Or(exprs) => exprs
+                .iter()
+                .any(|e| e.evaluate_with_vad(audio_levels, motion_level, vad_prob)),
+            EditExpr::Not(inner) => !inner.evaluate_with_vad(audio_levels, motion_level, vad_prob),
         }
     }
 }
@@ -129,9 +158,14 @@ fn parse_expression(tokens: &[Token], cursor: &mut usize) -> Result<EditExpr, St
                 "and" => Ok(EditExpr::And(operands)),
                 "not" => {
                     if operands.len() != 1 {
-                        return Err(format!("'not' operator expects exactly 1 operand, got {}", operands.len()));
+                        return Err(format!(
+                            "'not' operator expects exactly 1 operand, got {}",
+                            operands.len()
+                        ));
                     }
-                    Ok(EditExpr::Not(Box::new(operands.into_iter().next().unwrap())))
+                    Ok(EditExpr::Not(Box::new(
+                        operands.into_iter().next().unwrap(),
+                    )))
                 }
                 unknown => Err(format!("Unknown operator in expression: '{}'", unknown)),
             }
@@ -166,8 +200,18 @@ fn parse_single_method(id: &str) -> Result<EditExpr, String> {
                     if let Some((k, v)) = pair.split_once('=') {
                         match k.trim().to_lowercase().as_str() {
                             "threshold" => threshold = AudioThreshold::parse(v)?,
-                            "stream" => stream = if v.eq_ignore_ascii_case("all") { 0 } else { v.trim().parse().map_err(|e| format!("Invalid stream index: {}", e))? },
-                            unknown => return Err(format!("Unknown audio parameter '{}'", unknown)),
+                            "stream" => {
+                                stream = if v.eq_ignore_ascii_case("all") {
+                                    0
+                                } else {
+                                    v.trim()
+                                        .parse()
+                                        .map_err(|e| format!("Invalid stream index: {}", e))?
+                                }
+                            }
+                            unknown => {
+                                return Err(format!("Unknown audio parameter '{}'", unknown))
+                            }
                         }
                     } else {
                         // Positional first argument is threshold
@@ -186,7 +230,9 @@ fn parse_single_method(id: &str) -> Result<EditExpr, String> {
                     if let Some((k, v)) = pair.split_once('=') {
                         match k.trim().to_lowercase().as_str() {
                             "threshold" => threshold = MotionThreshold::parse(v)?,
-                            unknown => return Err(format!("Unknown motion parameter '{}'", unknown)),
+                            unknown => {
+                                return Err(format!("Unknown motion parameter '{}'", unknown))
+                            }
                         }
                     } else {
                         threshold = MotionThreshold::parse(pair)?;
@@ -194,6 +240,31 @@ fn parse_single_method(id: &str) -> Result<EditExpr, String> {
                 }
             }
             Ok(EditExpr::Method(EditMethod::Motion { threshold, stream }))
+        }
+        "vad" => {
+            let mut threshold = 0.5f64;
+            let mut stream = 0usize;
+            if !args.is_empty() {
+                for pair in args.split(',') {
+                    if let Some((k, v)) = pair.split_once('=') {
+                        match k.trim().to_lowercase().as_str() {
+                            "threshold" => {
+                                threshold = AudioThreshold::parse(v)?.linear;
+                            }
+                            "stream" => {
+                                stream = v
+                                    .trim()
+                                    .parse()
+                                    .map_err(|e| format!("Invalid VAD stream index: {}", e))?;
+                            }
+                            unknown => return Err(format!("Unknown vad parameter '{}'", unknown)),
+                        }
+                    } else {
+                        threshold = AudioThreshold::parse(pair)?.linear;
+                    }
+                }
+            }
+            Ok(EditExpr::Method(EditMethod::Vad { threshold, stream }))
         }
         unknown => Err(format!("Unknown edit method: '{}'", unknown)),
     }

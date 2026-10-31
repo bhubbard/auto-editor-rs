@@ -305,3 +305,86 @@ fn test_upstream_audio_rms_and_peak() {
     assert!(is_audio_active(peak, threshold));
     assert!(!is_audio_active(0.1, threshold));
 }
+
+#[test]
+fn test_upstream_lufs_vad_otio_and_take_scoring() {
+    use auto_editor::{
+        compute_lufs, compute_lufs_integrated, compute_vad_probability, parse_wav_pcm, score_takes,
+        select_best_take, TakeCandidate,
+    };
+
+    // 1. ITU-R BS.1770-4 LUFS & VAD expression evaluation
+    let expr = EditExpr::parse("(and audio:-24LUFS vad:0.6)").unwrap();
+    assert!(expr.evaluate_with_vad(&[0.12], 0.0, 0.8));
+    assert!(!expr.evaluate_with_vad(&[0.12], 0.0, 0.3));
+
+    let sr = 48_000u32;
+    let tone: Vec<f32> = (0..24_000)
+        .map(|n| (0.5 * (2.0 * std::f64::consts::PI * 440.0 * n as f64 / sr as f64).sin()) as f32)
+        .collect();
+    let lufs = compute_lufs(&tone, sr);
+    let lufs_int = compute_lufs_integrated(&tone, sr);
+    assert!(lufs > -12.0 && lufs < -6.0);
+    assert!((lufs - lufs_int).abs() < 0.5);
+    assert!(compute_vad_probability(&tone[0..1024], sr) > 0.7);
+
+    // 2. RIFF WAV PCM envelope extraction
+    let mut wav = Vec::new();
+    wav.extend_from_slice(b"RIFF");
+    let num_samples = 1600usize; // 0.1s at 16kHz -> 3 frames at 30fps
+    let data_bytes = (num_samples * 2) as u32;
+    wav.extend_from_slice(&(36u32 + data_bytes).to_le_bytes());
+    wav.extend_from_slice(b"WAVEfmt ");
+    wav.extend_from_slice(&16u32.to_le_bytes());
+    wav.extend_from_slice(&1u16.to_le_bytes());
+    wav.extend_from_slice(&1u16.to_le_bytes());
+    wav.extend_from_slice(&16000u32.to_le_bytes());
+    wav.extend_from_slice(&32000u32.to_le_bytes());
+    wav.extend_from_slice(&2u16.to_le_bytes());
+    wav.extend_from_slice(&16u16.to_le_bytes());
+    wav.extend_from_slice(b"data");
+    wav.extend_from_slice(&data_bytes.to_le_bytes());
+    for i in 0..num_samples {
+        let val =
+            ((2.0 * std::f64::consts::PI * 300.0 * i as f64 / 16000.0).sin() * 12000.0) as i16;
+        wav.extend_from_slice(&val.to_le_bytes());
+    }
+    let decoded = parse_wav_pcm(&wav).unwrap();
+    let tb = Timebase::fps_30();
+    let rms_env = decoded.frame_rms_envelope(&tb);
+    let vad_env = decoded.frame_vad_probabilities(&tb);
+    assert_eq!(rms_env.len(), 3);
+    assert_eq!(vad_env.len(), 3);
+    assert!(rms_env[0] > 0.15);
+
+    // 3. OpenTimelineIO (.otio) export with dynamic speed-up zone (1.75x)
+    let tl = Timeline::new(
+        "podcast.mp4".to_string(),
+        tb,
+        90,
+        vec![Chunk::new(0, 45, 1.0), Chunk::new(45, 90, 1.75)],
+    );
+    let otio_str = export_timeline(&tl, ExportFormat::Otio).unwrap();
+    assert!(otio_str.contains("\"OTIO_SCHEMA\": \"Timeline.1\""));
+    assert!(otio_str.contains("\"OTIO_SCHEMA\": \"LinearTimeWarp.1\""));
+    assert!(otio_str.contains("\"time_scalar\": 1.75"));
+
+    // 4. Multi-take scoring & best take selection
+    let takes = vec![
+        TakeCandidate {
+            start_frame: 0,
+            end_frame: 60,
+            transcript: "Welcome back— scratch that, let me try that again".to_string(),
+            rms_levels: vec![0.15, 0.14, 0.12],
+        },
+        TakeCandidate {
+            start_frame: 60,
+            end_frame: 120,
+            transcript: "Welcome back to the channel!".to_string(),
+            rms_levels: vec![0.18, 0.20, 0.19],
+        },
+    ];
+    let scores = score_takes(&takes, 0.04);
+    assert!(scores[0].has_restart_marker);
+    assert_eq!(select_best_take(&takes, 0.04), Some(1));
+}

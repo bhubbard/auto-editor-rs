@@ -9,7 +9,11 @@ pub fn export_premiere(timeline: &Timeline) -> String {
         .unwrap_or("media.mp4");
     let file_path = source_path.display().to_string();
     let timebase_int = timeline.timebase.as_f64().round() as i64;
-    let total_output_frames: i64 = timeline.kept_chunks().iter().map(|c| c.output_frames()).sum();
+    let total_output_frames: i64 = timeline
+        .kept_chunks()
+        .iter()
+        .map(|c| c.output_frames())
+        .sum();
 
     let mut xml = String::new();
     xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -17,7 +21,10 @@ pub fn export_premiere(timeline: &Timeline) -> String {
     xml.push_str("<xmeml version=\"4\">\n");
     xml.push_str("  <sequence>\n");
     xml.push_str(&format!("    <name>Auto-Editor: {}</name>\n", file_name));
-    xml.push_str(&format!("    <duration>{}</duration>\n", total_output_frames));
+    xml.push_str(&format!(
+        "    <duration>{}</duration>\n",
+        total_output_frames
+    ));
     xml.push_str("    <rate>\n");
     xml.push_str(&format!("      <timebase>{}</timebase>\n", timebase_int));
     xml.push_str("      <ntsc>FALSE</ntsc>\n");
@@ -26,7 +33,10 @@ pub fn export_premiere(timeline: &Timeline) -> String {
     xml.push_str("      <video>\n");
     xml.push_str("        <format>\n");
     xml.push_str("          <samplecharacteristics>\n");
-    xml.push_str(&format!("            <rate><timebase>{}</timebase></rate>\n", timebase_int));
+    xml.push_str(&format!(
+        "            <rate><timebase>{}</timebase></rate>\n",
+        timebase_int
+    ));
     xml.push_str("            <width>1920</width>\n");
     xml.push_str("            <height>1080</height>\n");
     xml.push_str("          </samplecharacteristics>\n");
@@ -42,17 +52,30 @@ pub fn export_premiere(timeline: &Timeline) -> String {
         xml.push_str("          <clipitem id=\"clipitem-");
         xml.push_str(&(i + 1).to_string());
         xml.push_str("\">\n");
-        xml.push_str(&format!("            <name>{} [{}]</name>\n", file_name, i + 1));
+        xml.push_str(&format!(
+            "            <name>{} [{}]</name>\n",
+            file_name,
+            i + 1
+        ));
         xml.push_str(&format!("            <duration>{}</duration>\n", dur));
         xml.push_str(&format!("            <start>{}</start>\n", timeline_cursor));
-        xml.push_str(&format!("            <end>{}</end>\n", timeline_cursor + dur));
+        xml.push_str(&format!(
+            "            <end>{}</end>\n",
+            timeline_cursor + dur
+        ));
         xml.push_str(&format!("            <in>{}</in>\n", in_frame));
         xml.push_str(&format!("            <out>{}</out>\n", out_frame));
         xml.push_str("            <file id=\"file-1\">\n");
         xml.push_str(&format!("              <name>{}</name>\n", file_name));
-        xml.push_str(&format!("              <pathurl>file://{}</pathurl>\n", file_path));
+        xml.push_str(&format!(
+            "              <pathurl>file://{}</pathurl>\n",
+            file_path
+        ));
         xml.push_str("              <rate>\n");
-        xml.push_str(&format!("                <timebase>{}</timebase>\n", timebase_int));
+        xml.push_str(&format!(
+            "                <timebase>{}</timebase>\n",
+            timebase_int
+        ));
         xml.push_str("              </rate>\n");
         xml.push_str("            </file>\n");
         xml.push_str("          </clipitem>\n");
