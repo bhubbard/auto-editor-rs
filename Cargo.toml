@@ -6,7 +6,9 @@ authors = ["Brandon Hubbard <bhubbard@users.noreply.github.com>"]
 description = "High-performance, pure Rust port of Auto-Editor — automatic video and audio editing by acoustic loudness, motion analysis, and NLE timeline export."
 license = "Unlicense OR MIT"
 repository = "https://github.com/bhubbard/auto-editor-rs"
-homepage = "https://github.com/bhubbard/auto-editor-rs"
+homepage = "https://code.brandonhubbard.com/auto-editor-rs/"
+documentation = "https://code.brandonhubbard.com/auto-editor-rs/"
+readme = "README.md"
 keywords = ["video-editing", "auto-editor", "nle", "audio-processing", "fcpxml"]
 categories = ["multimedia::video", "multimedia::audio", "command-line-utilities"]
 

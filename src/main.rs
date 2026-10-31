@@ -232,8 +232,10 @@ fn main() -> Result<()> {
         PathBuf::from(format!("{}_ALTERED.{}", stem, ext))
     });
 
-    let mut render_opts = RenderOptions::default();
-    render_opts.output_path = out_media.clone();
+    let render_opts = RenderOptions {
+        output_path: out_media.clone(),
+        ..RenderOptions::default()
+    };
 
     let cmd = RenderEngine::build_ffmpeg_render_command(&timeline, &render_opts)?;
 

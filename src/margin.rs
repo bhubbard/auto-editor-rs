@@ -63,13 +63,11 @@ impl Margin {
 
         let mut expanded = active_frames.to_vec();
 
-        for i in 0..n {
-            if active_frames[i] {
+        for (i, &is_active) in active_frames.iter().enumerate() {
+            if is_active {
                 let left = (i as i64 - self.start_frames).max(0) as usize;
                 let right = ((i as i64 + self.end_frames) as usize).min(n - 1);
-                for j in left..=right {
-                    expanded[j] = true;
-                }
+                expanded[left..=right].fill(true);
             }
         }
 
@@ -93,9 +91,7 @@ impl Margin {
                 let gap_len = i - start;
                 // If gap is bounded on both sides by active frames and is shorter than min_gap
                 if start > 0 && i < n && gap_len <= min_gap {
-                    for j in start..i {
-                        frames[j] = true;
-                    }
+                    frames[start..i].fill(true);
                 }
             } else {
                 i += 1;

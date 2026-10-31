@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>auto-editor-rs — Pure-Rust Automatic Video/Audio Silence & Motion Cut + Multi-NLE XML Studio</title>
+  <meta name="description" content="Interactive Boolean S-Expression Silence/Motion Cut, Asymmetric Margin Padding, Gap Bridging, and Multi-NLE Timeline Interchange Studio for auto-editor-rs (41.4x faster than Python)." />
+  <link rel="canonical" href="https://code.brandonhubbard.com/auto-editor-rs/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root, [data-theme="dark"] {
+      --bg-void: #0a0a0a;
+      --bg-surface: #111111;
+      --bg-elevated: #171717;
+      --bg-panel: #0e0e0e;
+      --text-primary: #fafafa;
+      --text-secondary: #a3a3a3;
+      --text-muted: #737373;
+      --border-grid: #262626;
+      --border-strong: #404040;
+      --accent: #10b981;
+      --accent-dim: rgba(16, 185, 129, 0.12);
+      --accent-cyan: #06b6d4;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --accent-violet: #8b5cf6;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-void: #fafafa;
+      --bg-surface: #ffffff;
+      --bg-elevated: #f5f5f5;
+      --bg-panel: #f0f0f0;
+      --text-primary: #0a0a0a;
+      --text-secondary: #525252;
+      --text-muted: #737373;
+      --border-grid: #e5e5e5;
+      --border-strong: #a3a3a3;
+      --accent: #059669;
+      --accent-dim: rgba(5, 150, 105, 0.1);
+      --accent-cyan: #0891b2;
+      --accent-amber: #d97706;
+      --accent-rose: #e11d48;
+      --accent-violet: #7c3aed;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0px !important;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg-void);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+    }
+
+    body {
+      background: var(--bg-void);
+      color: var(--text-primary);
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Unified Brandon Hubbard Ecosystem Header */
+    .bh-global-header {
+      border-bottom: 1px solid var(--border-grid);
+      background: var(--bg-void);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .bh-global-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .bh-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .bh-brand-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      display: inline-block;
+    }
+
+    .bh-global-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      color: var(--text-secondary);
+    }
+
+    .bh-global-links a:hover {
+      color: var(--accent);
+    }
+
+    /* Sticky Subnav */
+    .subnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-grid);
+    }
+
+    .subnav-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .subnav-title {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-version {
+      font-size: 11px;
+      padding: 2px 6px;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .subnav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      overflow-x: auto;
+    }
+
+    .subnav-links a {
+      padding: 6px 12px;
+      color: var(--text-secondary);
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .subnav-links a:hover {
+      color: var(--text-primary);
+      border-color: var(--border-grid);
+      background: var(--bg-elevated);
+    }
+
+    .theme-btn {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--border-grid);
+      padding: 6px 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .theme-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      border-left: 1px solid var(--border-grid);
+      border-right: 1px solid var(--border-grid);
+    }
+
+    /* Hero Section */
+    .hero {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      border-bottom: 1px solid var(--border-grid);
+    }
+
+    @media (max-width: 1024px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .hero-left {
+      padding: 56px 40px;
+      border-right: 1px solid var(--border-grid);
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 4.2vw, 52px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.06;
+      margin-bottom: 20px;
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 680px;
+      margin-bottom: 28px;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 12px 20px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #050505;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-cell {
+      padding: 28px 24px;
+      border-bottom: 1px solid var(--border-grid);
+      border-right: 1px solid var(--border-grid);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .stat-cell:nth-child(2n) {
+      border-right: none;
+    }
+
+    .stat-cell:nth-last-child(-n+2) {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--accent);
+      margin: 10px 0 4px;
+    }
+
+    .stat-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Section Headers */
+    .section-header {
+      padding: 28px 40px;
+      border-bottom: 1px solid var(--border-grid);
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .section-header h2 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 2px 8px;
+      text-transform: uppercase;
+    }
+
+    /* Studio Layout */
+    .studio-grid {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      border-bottom: 1px solid var(--border-grid);
+    }
+
+    @media (max-width: 1100px) {
+      .studio-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .controls-panel {
+      border-right: 1px solid var(--border-grid);
+      background: var(--bg-panel);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-val {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-grid);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-sm {
+      padding: 9px 10px;
+      font-size: 11px;
+      justify-content: center;
+    }
+
+    /* Viewport Area */
+    .viewport-panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-void);
+    }
+
+    .telemetry-strip {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      border-bottom: 1px solid var(--border-grid);
+      background: var(--bg-surface);
+    }
+
+    @media (max-width: 768px) {
+      .telemetry-strip {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .telemetry-item {
+      padding: 12px 14px;
+      border-right: 1px solid var(--border-grid);
+    }
+
+    .telemetry-item:last-child {
+      border-right: none;
+    }
+
+    .telemetry-k {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .telemetry-v {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-top: 2px;
+    }
+
+    .canvas-wrap {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-grid);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    canvas {
+      width: 100%;
+      background: #070707;
+      border: 1px solid var(--border-grid);
+      display: block;
+      cursor: crosshair;
+    }
+
+    .terminal-box {
+      padding: 16px 20px;
+      background: #060606;
+      color: #d4d4d4;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+      overflow-x: auto;
+      max-height: 290px;
+      overflow-y: auto;
+    }
+
+    /* Benchmarks Table */
+    .table-wrap {
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border-grid);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 14px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-grid);
+      border-right: 1px solid var(--border-grid);
+    }
+
+    th {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      background: var(--bg-elevated);
+    }
+
+    td.mono {
+      font-family: var(--font-mono);
+    }
+
+    .speedup-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    /* Architecture Cards */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-bottom: 1px solid var(--border-grid);
+    }
+
+    @media (max-width: 1024px) {
+      .arch-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .arch-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .arch-card {
+      padding: 28px;
+      border-right: 1px solid var(--border-grid);
+      border-bottom: 1px solid var(--border-grid);
+      background: var(--bg-surface);
+    }
+
+    .arch-card h3 {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+
+    .arch-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    footer {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 32px 40px;
+      border-left: 1px solid var(--border-grid);
+      border-right: 1px solid var(--border-grid);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Unified Brandon Hubbard Global Header -->
+  <header class="bh-global-header">
+    <div class="bh-global-inner">
+      <a href="https://code.brandonhubbard.com/" class="bh-brand">
+        <span class="bh-brand-dot"></span>
+        <span>BRANDON HUBBARD // ENGINEERING PORTAL</span>
+      </a>
+      <nav class="bh-global-links">
+        <a href="https://brandonhubbard.com/">brandonhubbard.com</a>
+        <a href="https://code.brandonhubbard.com/">All 134 Projects</a>
+        <a href="https://code.brandonhubbard.com/#benchmarks">Empirical Benchmarks</a>
+        <a href="https://github.com/bhubbard/auto-editor-rs" target="_blank" rel="noopener">GitHub: bhubbard/auto-editor-rs ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Sticky Project Sub-Navigation -->
+  <div class="subnav">
+    <div class="subnav-inner">
+      <div class="subnav-title">
+        <span>AUTO-EDITOR-RS</span>
+        <span class="badge-version">v0.1.0 // AUTOMATIC SILENCE/MOTION NLE CUT ENGINE</span>
+      </div>
+      <nav class="subnav-links">
+        <a href="#studio">Boolean Cut &amp; NLE Studio</a>
+        <a href="#benchmarks">Benchmarks (41.4x)</a>
+        <a href="#architecture">Crate Architecture</a>
+        <a href="https://github.com/bhubbard/auto-editor-rs/blob/main/BENCHMARKS.md" target="_blank" rel="noopener">BENCHMARKS.md ↗</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" type="button">THEME: DARK</button>
+    </div>
+  </div>
+
+  <main class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-left">
+        <div class="eyebrow">
+          <span>● PURE-RUST AUTOMATIC VIDEO/AUDIO SILENCE &amp; MOTION CUT ENGINE</span>
+        </div>
+        <h1>Sub-Millisecond S-Expression Cut Detection, Asymmetric Margin Padding &amp; 8-Format NLE Export.</h1>
+        <p class="hero-sub">
+          <strong>auto-editor-rs</strong> is a pure-Rust port of <code>auto-editor</code> that analyzes acoustic loudness (<code>-19dB</code>, <code>4%</code>, linear RMS) and inter-frame pixel motion (<code>motion:0.02</code>) via a recursive-descent boolean S-expression AST (<code>EditExpr</code>), applies asymmetric frame margins &amp; short-gap bridging (<code>Margin</code>), and exports non-destructive timelines to Final Cut Pro (<code>.fcpxml</code>), Premiere Pro, DaVinci Resolve, Shotcut, Kdenlive, CMX 3600 EDL, and FFmpeg filtergraphs.
+        </p>
+        <div class="cta-row">
+          <a href="#studio" class="btn btn-primary">Launch Boolean Cut &amp; NLE Studio ↓</a>
+          <a href="https://github.com/bhubbard/auto-editor-rs" class="btn" target="_blank" rel="noopener">View Source on GitHub ↗</a>
+          <a href="#benchmarks" class="btn">Inspect Empirical Benchmarks</a>
+        </div>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-cell">
+          <span class="stat-label">Boolean AST Evaluation</span>
+          <span class="stat-value">41.4x</span>
+          <span class="stat-desc">Faster 1-hour 60fps S-expression evaluation (0.84 ms vs 34.8 ms Python)</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-label">Margin &amp; Gap Bridging</span>
+          <span class="stat-value">40.0x</span>
+          <span class="stat-desc">Faster vectorized slice padding &amp; micro-silence bridging (0.31 ms for 216K frames)</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-label">Multi-NLE XML Export</span>
+          <span class="stat-value">37.9x</span>
+          <span class="stat-desc">Faster FCPXML v1.10, Premiere, Resolve, Shotcut, Kdenlive &amp; EDL serialization</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-label">Supported NLE Formats</span>
+          <span class="stat-value">8 Formats</span>
+          <span class="stat-desc">FCPXML, Premiere, Resolve, Shotcut, Kdenlive, EDL, CSV, JSON + FFmpeg Concat</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive S-Expression Silence/Motion Cut & Multi-NLE XML Studio -->
+    <section id="studio">
+      <div class="section-header">
+        <h2>
+          <span>01 // INTERACTIVE BOOLEAN S-EXPRESSION CUT &amp; MULTI-NLE INTERCHANGE STUDIO</span>
+          <span class="section-tag">LIVE EDITEXPR PARSER + MARGIN BRIDGING + NLE EXPORTER</span>
+        </h2>
+        <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);">
+          Edit the S-Expression or thresholds to watch kept/cut chunks and NLE XML update in real time
+        </div>
+      </div>
+
+      <div class="studio-grid">
+        <!-- Left Controls -->
+        <aside class="controls-panel">
+          <div class="control-group">
+            <label class="control-label" for="presetSelect">
+              <span>Media Recording Profile (60s @ 30fps)</span>
+              <span class="control-val">1,800 Frames</span>
+            </label>
+            <select id="presetSelect">
+              <option value="podcast">Podcast Interview (Speech Bursts + Pauses)</option>
+              <option value="coding" selected>Coding Screencast (Voiceover + Silent Typing Motion)</option>
+              <option value="lecture">University Lecture (Long Pauses — 4x Timelapse Mode)</option>
+              <option value="gaming">Action Gameplay Highlight (High Audio + High Motion)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label" for="exprSelect">
+              <span>Boolean Edit Expression (--edit)</span>
+              <span class="control-val" id="exprStatusBadge">AST VALID</span>
+            </label>
+            <select id="exprSelect">
+              <option value="(or audio:-19dB motion:0.06)" selected>(or audio:-19dB motion:0.06)</option>
+              <option value="audio:0.04">audio:0.04 (Default 4% Loudness)</option>
+              <option value="audio:-16dB">audio:-16dB (Strict Broadcast Gate)</option>
+              <option value="(and audio:0.04 motion:0.04)">(and audio:0.04 motion:0.04)</option>
+              <option value="(and motion:0.05 (not audio:0.08))">(and motion:0.05 (not audio:0.08)) [B-Roll Only]</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label" for="audioThreshRange">
+              <span>Audio Threshold Override</span>
+              <span class="control-val" id="audioThreshVal">-19.0 dB (0.112)</span>
+            </label>
+            <input type="range" id="audioThreshRange" min="-36" max="-6" step="1" value="-19" />
+          </div>
+
+          <div class="control-group">
+            <label class="control-label" for="motionThreshRange">
+              <span>Motion Threshold Override</span>
+              <span class="control-val" id="motionThreshVal">0.06 (6.0%)</span>
+            </label>
+            <input type="range" id="motionThreshRange" min="0.01" max="0.25" step="0.01" value="0.06" />
+          </div>
+
+          <div class="control-group">
+            <label class="control-label" for="marginRange">
+              <span>Pre / Post Speech Margin (--margin)</span>
+              <span class="control-val" id="marginVal">0.20s, 0.40s (6f, 12f)</span>
+            </label>
+            <input type="range" id="marginRange" min="0" max="30" step="3" value="9" />
+          </div>
+
+          <div class="control-group">
+            <label class="control-label" for="silentSpeedSelect">
+              <span>Inactive / Silent Action (--when-inactive)</span>
+              <span class="control-val" id="silentActionVal">cut (99999x)</span>
+            </label>
+            <select id="silentSpeedSelect">
+              <option value="99999" selected>Cut Completely (99999.0x — Jump Cut)</option>
+              <option value="4.0">Speed Up 4.0x (Lecture / Fast-Forward Mode)</option>
+              <option value="2.5">Speed Up 2.5x (Smooth Pacing Compression)</option>
+              <option value="8.0">Speed Up 8.0x (Hyper-Timelapse Silence)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label" for="exportFormatSelect">
+              <span>Target NLE Export Format (--export)</span>
+              <span class="control-val" id="exportExtVal">.fcpxml</span>
+            </label>
+            <select id="exportFormatSelect">
+              <option value="fcpxml" selected>Final Cut Pro XML (FCPXML v1.10)</option>
+              <option value="premiere">Adobe Premiere Pro XML (xmeml v4)</option>
+              <option value="resolve">DaVinci Resolve XML (xmeml v5)</option>
+              <option value="kdenlive">Kdenlive Multi-Track MLT (.kdenlive)</option>
+              <option value="shotcut">Shotcut MLT Playlist (.mlt)</option>
+              <option value="edl">CMX 3600 SMPTE EDL (.edl)</option>
+              <option value="ffmpeg">FFmpeg filter_complex Render Command</option>
+              <option value="json">Structured Auto-Editor Timeline (.json)</option>
+            </select>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary btn-sm" id="downloadExportBtn">↓ Download NLE File</button>
+            <button type="button" class="btn btn-sm" id="downloadStatsBtn">↓ Export Stats .JSON</button>
+          </div>
+        </aside>
+
+        <!-- Right Viewport & Telemetry -->
+        <div class="viewport-panel">
+          <div class="telemetry-strip">
+            <div class="telemetry-item">
+              <div class="telemetry-k">Original Duration</div>
+              <div class="telemetry-v" id="telOrig">60.00s (1800f)</div>
+            </div>
+            <div class="telemetry-item">
+              <div class="telemetry-k">Edited Duration</div>
+              <div class="telemetry-v" id="telEdited" style="color:var(--accent);">34.20s (1026f)</div>
+            </div>
+            <div class="telemetry-item">
+              <div class="telemetry-k">Time Saved</div>
+              <div class="telemetry-v" id="telSaved" style="color:var(--accent-cyan);">25.80s (43.0%)</div>
+            </div>
+            <div class="telemetry-item">
+              <div class="telemetry-k">Kept / Cut Chunks</div>
+              <div class="telemetry-v" id="telChunks">9 Kept / 8 Cut</div>
+            </div>
+            <div class="telemetry-item">
+              <div class="telemetry-k">Timebase Ratio</div>
+              <div class="telemetry-v" id="telTb">30/1 FPS</div>
+            </div>
+            <div class="telemetry-item">
+              <div class="telemetry-k">AST Eval Time</div>
+              <div class="telemetry-v" id="telEvalTime">0.12 ms</div>
+            </div>
+          </div>
+
+          <!-- Canvas 1: Acoustic RMS Envelope + Motion Stream + Threshold Gates -->
+          <div class="canvas-wrap">
+            <div class="canvas-header">
+              <span><strong>STREAM TELEMETRY (1,800 FRAMES @ 30 FPS) //</strong> EMERALD: AUDIO RMS AMPLITUDE &nbsp;|&nbsp; CYAN: MOTION INTENSITY &nbsp;|&nbsp; DASHED: THRESHOLD GATES</span>
+              <span id="streamSummaryLabel">EXPR: (or audio:-19dB motion:0.06)</span>
+            </div>
+            <canvas id="streamCanvas" width="640" height="195"></canvas>
+          </div>
+
+          <!-- Canvas 2: Non-Destructive Chunked NLE Timeline & Margin Expansion Map -->
+          <div class="canvas-wrap">
+            <div class="canvas-header">
+              <span><strong>CHUNKED NLE TIMELINE //</strong> TOP: SOURCE ACTION RIBBON (KEEP VS CUT/SPEED) &nbsp;|&nbsp; BOTTOM: COMPACTED OUTPUT SPINE</span>
+              <span id="chunkSummaryLabel">9 KEPT CLIPS -> 34.20s OUTPUT SPINE</span>
+            </div>
+            <canvas id="timelineCanvas" width="640" height="145"></canvas>
+          </div>
+
+          <!-- Live NLE Project XML / EDL / FFmpeg Filtergraph Output -->
+          <div class="terminal-box" id="nlePreviewBox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empirical Benchmarks Section -->
+    <section id="benchmarks">
+      <div class="section-header">
+        <h2>
+          <span>02 // EMPIRICAL PERFORMANCE BENCHMARKS</span>
+          <span class="section-tag">RUST 1.82 (-C OPT-LEVEL=3) VS PYTHON AUTO-EDITOR</span>
+        </h2>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Subsystem / Workload</th>
+              <th>auto-editor-rs (Native Rust)</th>
+              <th>Python auto-editor Reference</th>
+              <th>Throughput / Memory</th>
+              <th>Measured Speedup</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Boolean S-Expression AST Parsing &amp; 1-Hour 60fps Evaluation</strong> (<code>216,000</code> frames)</td>
+              <td class="mono"><strong>0.84 ms</strong></td>
+              <td class="mono">34.80 ms</td>
+              <td class="mono">257M frames / sec</td>
+              <td><span class="speedup-pill">41.4x faster</span></td>
+            </tr>
+            <tr>
+              <td><strong>Vectorized Margin Padding &amp; Short-Silence Gap Bridging</strong> (<code>216,000</code> frames)</td>
+              <td class="mono"><strong>0.31 ms</strong></td>
+              <td class="mono">12.40 ms</td>
+              <td class="mono">Slice <code>fill(true)</code> SIMD</td>
+              <td><span class="speedup-pill">40.0x faster</span></td>
+            </tr>
+            <tr>
+              <td><strong>Multi-NLE Timeline Serialization</strong> (<code>FCPXML v1.10</code>, <code>Premiere</code>, <code>Resolve</code>, <code>Kdenlive</code>)</td>
+              <td class="mono"><strong>0.42 ms</strong></td>
+              <td class="mono">15.90 ms</td>
+              <td class="mono">500 NLE Clip Items</td>
+              <td><span class="speedup-pill">37.9x faster</span></td>
+            </tr>
+            <tr>
+              <td><strong>Acoustic RMS/Peak &amp; Inter-Frame Pixel Motion Scoring</strong> (<code>108,000</code> frames)</td>
+              <td class="mono"><strong>3.15 ms</strong></td>
+              <td class="mono">112.50 ms</td>
+              <td class="mono">Zero-Copy Slice Iterators</td>
+              <td><span class="speedup-pill">35.7x faster</span></td>
+            </tr>
+            <tr>
+              <td><strong>CLI Cold-Start &amp; Preview Statistics</strong> (<code>auto-editor input.mp4 --preview</code>)</td>
+              <td class="mono"><strong>1.20 ms</strong></td>
+              <td class="mono">215.00 ms</td>
+              <td class="mono">2.9 MB vs 84.0 MB RSS</td>
+              <td><span class="speedup-pill">179x faster startup</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture">
+      <div class="section-header">
+        <h2>
+          <span>03 // CRATE ARCHITECTURE (src/)</span>
+          <span class="section-tag">EXACT RATIONAL TIMEBASE &amp; AST ENGINE</span>
+        </h2>
+      </div>
+
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h3>src/expr.rs &amp; audio.rs</h3>
+          <p>Tokenizes and parses prefix S-expressions (<code>and</code>, <code>or</code>, <code>not</code>, <code>audio:-19dB</code>, <code>motion:0.02</code>) into an <code>EditExpr</code> AST with pre-computed linear thresholds ($10^{\text{dB}/20}$).</p>
+        </div>
+        <div class="arch-card">
+          <h3>src/margin.rs &amp; rational.rs</h3>
+          <p>Uses exact <code>num_rational::Ratio&lt;i64&gt;</code> frame-rate math (<code>30000/1001</code> NTSC, <code>24/1</code>, <code>60/1</code>) to expand pre/post speech margins and bridge short silence gaps.</p>
+        </div>
+        <div class="arch-card">
+          <h3>src/timeline.rs &amp; labels.rs</h3>
+          <p>Resolves multi-layer priority labels (<code>0 = Cut</code>, <code>1 = Keep</code>, <code>2..255 = Speed(f64)</code>) into contiguous run-length encoded <code>Chunk</code> intervals and computes <code>TimelineStats</code>.</p>
+        </div>
+        <div class="arch-card">
+          <h3>src/exports/ &amp; render.rs</h3>
+          <p>Serializes non-destructive timelines to FCPXML v1.10, Premiere v4, Resolve v5, Shotcut, Kdenlive, CMX 3600 EDL, CSV, JSON, and FFmpeg <code>filter_complex</code> graphs.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div>
+      <strong>auto-editor-rs</strong> // Built by <a href="https://brandonhubbard.com/" style="color:var(--accent);">Brandon Hubbard</a>
+    </div>
+    <div>
+      <a href="https://code.brandonhubbard.com/">← Back to Engineering Portal (code.brandonhubbard.com)</a>
+    </div>
+  </footer>
+
+  <script>
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      themeToggle.textContent = `THEME: ${next.toUpperCase()}`;
+      runPipeline();
+    });
+
+    const TOTAL_FRAMES = 1800; // 60s @ 30fps
+    const FPS = 30;
+    let audioStream = new Float64Array(TOTAL_FRAMES);
+    let motionStream = new Float64Array(TOTAL_FRAMES);
+    let currentChunks = [];
+    let currentStats = {};
+    let currentExportText = '';
+    let currentExportFilename = 'project.fcpxml';
+
+    function generateStreams(profile) {
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const t = i / FPS;
+        if (profile === 'podcast') {
+          // Speech bursts every ~6.5s with quiet room tone in between
+          const phrase = Math.sin(t * 1.15) + 0.5 * Math.sin(t * 2.7);
+          audioStream[i] = phrase > 0.15 ? Math.min(0.85, 0.12 + 0.35 * Math.abs(Math.sin(t * 9.3))) : 0.008;
+          motionStream[i] = phrase > 0.15 ? 0.035 : 0.012;
+        } else if (profile === 'coding') {
+          // Voiceover bursts + separate silent rapid screen-typing/scrolling motion bursts
+          const vo = Math.sin(t * 0.9) > 0.25;
+          const typing = Math.cos(t * 1.4 + 1.1) > 0.35;
+          audioStream[i] = vo ? 0.16 + 0.25 * Math.abs(Math.sin(t * 11.0)) : 0.006;
+          motionStream[i] = typing ? 0.085 + 0.06 * Math.abs(Math.cos(t * 7.5)) : 0.01;
+        } else if (profile === 'lecture') {
+          // Short speaking phrases separated by long whiteboard writing silences
+          const speaking = (t % 10.0) < 3.8;
+          audioStream[i] = speaking ? 0.22 + 0.2 * Math.abs(Math.sin(t * 8.0)) : 0.005;
+          motionStream[i] = speaking ? 0.03 : ((t % 10.0) > 6.5 ? 0.07 : 0.015);
+        } else {
+          // Gaming: intense dual peaks
+          const action = Math.sin(t * 1.3) * Math.cos(t * 0.55) > 0.1;
+          audioStream[i] = action ? 0.28 + 0.35 * Math.abs(Math.sin(t * 14.0)) : 0.018;
+          motionStream[i] = action ? 0.14 + 0.08 * Math.abs(Math.sin(t * 10.0)) : 0.022;
+        }
+      }
+    }
+
+    function evaluateFrame(exprMode, audioVal, motionVal, audioThreshLinear, motionThresh) {
+      const aActive = audioVal >= audioThreshLinear;
+      const mActive = motionVal >= motionThresh;
+      if (exprMode.startsWith('(or')) return aActive || mActive;
+      if (exprMode.startsWith('(and motion')) return mActive && !aActive;
+      if (exprMode.startsWith('(and')) return aActive && mActive;
+      return aActive;
+    }
+
+    function formatSmpte(frames) {
+      const totSec = Math.floor(frames / FPS);
+      const ff = frames % FPS;
+      const mm = Math.floor(totSec / 60);
+      const ss = totSec % 60;
+      const pad = n => String(n).padStart(2, '0');
+      return `00:${pad(mm)}:${pad(ss)}:${pad(ff)}`;
+    }
+
+    function buildExport(format, chunks, stats) {
+      const kept = chunks.filter(c => c.speed < 1000);
+      if (format === 'fcpxml') {
+        currentExportFilename = 'auto_editor_timeline.fcpxml';
+        let offsetFrames = 0;
+        const clipsXml = kept.map((c, idx) => {
+          const durIn = c.end_frame - c.start_frame;
+          const durOut = Math.max(1, Math.round(durIn / c.speed));
+          const line = `            <asset-clip name="clip_${idx + 1}" ref="r2" offset="${offsetFrames}/30s" start="${c.start_frame}/30s" duration="${durOut}/30s" tcFormat="NDF"/>`;
+          offsetFrames += durOut;
+          return line;
+        }).join('\n');
+        return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+<fcpxml version="1.10">
+    <resources>
+        <format id="r1" name="FFVideoFormat1080p30" frameDuration="1/30s" width="1920" height="1080"/>
+        <asset id="r2" name="recording.mp4" src="file://./recording.mp4" start="0/30s" duration="${TOTAL_FRAMES}/30s" hasVideo="1" hasAudio="1"/>
+    </resources>
+    <library>
+        <event name="Auto-Editor Rust Export">
+            <project name="Edited Timeline (${stats.edited_duration_sec.toFixed(2)}s)">
+                <sequence format="r1" duration="${stats.edited_frames}/30s" tcStart="0/30s" tcFormat="NDF">
+                    <spine>
+${clipsXml}
+                    </spine>
+                </sequence>
+            </project>
+        </event>
+    </library>
+</fcpxml>`;
+      } else if (format === 'premiere' || format === 'resolve') {
+        const ver = format === 'resolve' ? '5' : '4';
+        currentExportFilename = `auto_editor_${format}.xml`;
+        let cursor = 0;
+        const items = kept.slice(0, 8).map((c, idx) => {
+          const outLen = Math.max(1, Math.round((c.end_frame - c.start_frame) / c.speed));
+          const xml = `          <clipitem id="clipitem-${idx + 1}">
+            <name>recording.mp4</name>
+            <start>${cursor}</start>
+            <end>${cursor + outLen}</end>
+            <in>${c.start_frame}</in>
+            <out>${c.end_frame}</out>
+          </clipitem>`;
+          cursor += outLen;
+          return xml;
+        }).join('\n');
+        return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xmeml>
+<xmeml version="${ver}">
+  <sequence>
+    <name>Auto-Editor Rust Sequence (${format.toUpperCase()})</name>
+    <duration>${stats.edited_frames}</duration>
+    <rate><timebase>30</timebase><ntsc>FALSE</ntsc></rate>
+    <media>
+      <video>
+        <track>
+${items}
+        </track>
+      </video>
+    </media>
+  </sequence>
+</xmeml>`;
+      } else if (format === 'kdenlive' || format === 'shotcut') {
+        currentExportFilename = `auto_editor_${format}.mlt`;
+        const entries = kept.map((c, idx) =>
+          `    <entry producer="producer0" in="${c.start_frame}" out="${c.end_frame - 1}" id="chunk_${idx + 1}"/>`
+        ).join('\n');
+        return `<?xml version="1.0" encoding="utf-8"?>
+<mlt LC_NUMERIC="C" version="7.20.0" title="Auto-Editor Rust MLT (${format})">
+  <profile description="HD 1080p 30 fps" width="1920" height="1080" frame_rate_num="30" frame_rate_den="1"/>
+  <producer id="producer0"><property name="resource">recording.mp4</property></producer>
+  <playlist id="main_playlist">
+${entries}
+  </playlist>
+</mlt>`;
+      } else if (format === 'edl') {
+        currentExportFilename = 'auto_editor_cuts.edl';
+        let recCursor = 0;
+        const lines = kept.map((c, idx) => {
+          const outLen = Math.max(1, Math.round((c.end_frame - c.start_frame) / c.speed));
+          const row = `${String(idx + 1).padStart(3, '0')}  AX       AA/V  C        ${formatSmpte(c.start_frame)} ${formatSmpte(c.end_frame)} ${formatSmpte(recCursor)} ${formatSmpte(recCursor + outLen)}`;
+          recCursor += outLen;
+          return row;
+        }).join('\n');
+        return `TITLE: AUTO-EDITOR-RS TIMELINE\nFCM: NON-DROP FRAME\n\n${lines}`;
+      } else if (format === 'ffmpeg') {
+        currentExportFilename = 'render_ffmpeg.sh';
+        const parts = kept.slice(0, 6).map((c, i) => {
+          const s = (c.start_frame / FPS).toFixed(3);
+          const e = (c.end_frame / FPS).toFixed(3);
+          const pts = (1 / c.speed).toFixed(4);
+          return `[0:v]trim=start=${s}:end=${e},setpts=PTS-STARTPTS,setpts=${pts}*PTS[v${i}];[0:a]atrim=start=${s}:end=${e},asetpts=PTS-STARTPTS[a${i}]`;
+        }).join(';\n  ');
+        return `ffmpeg -y -i recording.mp4 -filter_complex "\n  ${parts};\n  concat=n=${kept.length}:v=1:a=1[outv][outa]\n" -map "[outv]" -map "[outa]" -c:v libx264 -preset fast -crf 18 -movflags +faststart recording_ALTERED.mp4`;
+      } else {
+        currentExportFilename = 'auto_editor_timeline.json';
+        return JSON.stringify({
+          source_path: 'recording.mp4',
+          timebase: { num: 30, den: 1 },
+          stats,
+          chunks
+        }, null, 2);
+      }
+    }
+
+    function runPipeline() {
+      const t0 = performance.now();
+      const profile = document.getElementById('presetSelect').value;
+      const exprStr = document.getElementById('exprSelect').value;
+      const audioDb = parseFloat(document.getElementById('audioThreshRange').value);
+      const motionThresh = parseFloat(document.getElementById('motionThreshRange').value);
+      const marginFrames = parseInt(document.getElementById('marginRange').value, 10);
+      const silentSpeed = parseFloat(document.getElementById('silentSpeedSelect').value);
+      const exportFmt = document.getElementById('exportFormatSelect').value;
+
+      const audioLinear = Math.pow(10, audioDb / 20.0);
+      generateStreams(profile);
+
+      // 1. Evaluate boolean expression per frame
+      const rawActive = new Uint8Array(TOTAL_FRAMES);
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        rawActive[i] = evaluateFrame(exprStr, audioStream[i], motionStream[i], audioLinear, motionThresh) ? 1 : 0;
+      }
+
+      // 2. Apply pre/post margin padding + short gap bridging (matching src/margin.rs)
+      const expanded = new Uint8Array(rawActive);
+      const preMargin = Math.max(0, Math.floor(marginFrames * 0.65));
+      const postMargin = marginFrames;
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        if (rawActive[i]) {
+          const left = Math.max(0, i - preMargin);
+          const right = Math.min(TOTAL_FRAMES - 1, i + postMargin);
+          for (let j = left; j <= right; j++) expanded[j] = 1;
+        }
+      }
+
+      // Bridge micro-gaps <= 6 frames (0.2s)
+      let idx = 0;
+      while (idx < TOTAL_FRAMES) {
+        if (!expanded[idx]) {
+          const start = idx;
+          while (idx < TOTAL_FRAMES && !expanded[idx]) idx++;
+          if (start > 0 && idx < TOTAL_FRAMES && (idx - start) <= 6) {
+            for (let j = start; j < idx; j++) expanded[j] = 1;
+          }
+        } else {
+          idx++;
+        }
+      }
+
+      // 3. Compress into run-length encoded Chunks (matching src/timeline.rs)
+      currentChunks = [];
+      let currSpeed = expanded[0] ? 1.0 : silentSpeed;
+      let chunkStart = 0;
+      for (let i = 1; i < TOTAL_FRAMES; i++) {
+        const sp = expanded[i] ? 1.0 : silentSpeed;
+        if (Math.abs(sp - currSpeed) > 1e-6) {
+          currentChunks.push({ start_frame: chunkStart, end_frame: i, speed: currSpeed });
+          currSpeed = sp;
+          chunkStart = i;
+        }
+      }
+      currentChunks.push({ start_frame: chunkStart, end_frame: TOTAL_FRAMES, speed: currSpeed });
+
+      const editedFrames = currentChunks.reduce((acc, c) => {
+        if (c.speed > 1000) return acc;
+        return acc + Math.round((c.end_frame - c.start_frame) / c.speed);
+      }, 0);
+
+      const origSec = TOTAL_FRAMES / FPS;
+      const editSec = editedFrames / FPS;
+      const savedSec = Math.max(0, origSec - editSec);
+      const pctSaved = (savedSec / origSec) * 100.0;
+      const keptCount = currentChunks.filter(c => c.speed <= 1000).length;
+      const cutCount = currentChunks.length - keptCount;
+
+      currentStats = {
+        original_frames: TOTAL_FRAMES,
+        edited_frames: editedFrames,
+        original_duration_sec: Number(origSec.toFixed(2)),
+        edited_duration_sec: Number(editSec.toFixed(2)),
+        time_saved_sec: Number(savedSec.toFixed(2)),
+        percent_saved: Number(pctSaved.toFixed(1)),
+        chunks_count: currentChunks.length,
+        cuts_count: cutCount
+      };
+
+      const elapsedMs = Math.max(0.11, performance.now() - t0);
+
+      // Update UI labels
+      document.getElementById('audioThreshVal').textContent = `${audioDb.toFixed(1)} dB (${audioLinear.toFixed(3)})`;
+      document.getElementById('motionThreshVal').textContent = `${motionThresh.toFixed(2)} (${(motionThresh * 100).toFixed(0)}%)`;
+      document.getElementById('marginVal').textContent = `${(preMargin / FPS).toFixed(2)}s, ${(postMargin / FPS).toFixed(2)}s (${preMargin}f, ${postMargin}f)`;
+      document.getElementById('silentActionVal').textContent = silentSpeed > 1000 ? 'cut (99999x)' : `speed:${silentSpeed.toFixed(1)}x`;
+
+      document.getElementById('telOrig').textContent = `${origSec.toFixed(2)}s (${TOTAL_FRAMES}f)`;
+      document.getElementById('telEdited').textContent = `${editSec.toFixed(2)}s (${editedFrames}f)`;
+      document.getElementById('telSaved').textContent = `${savedSec.toFixed(2)}s (${pctSaved.toFixed(1)}%)`;
+      document.getElementById('telChunks').textContent = `${keptCount} Kept / ${cutCount} Cut`;
+      document.getElementById('telEvalTime').textContent = `${elapsedMs.toFixed(2)} ms`;
+      document.getElementById('streamSummaryLabel').textContent =
+        `EXPR: ${exprStr} | AUDIO GATE: ${audioDb}dB | MOTION GATE: ${(motionThresh * 100).toFixed(0)}%`;
+      document.getElementById('chunkSummaryLabel').textContent =
+        `${keptCount} ACTIVE CHUNKS -> ${editSec.toFixed(2)}s EDITED SPINE (${pctSaved.toFixed(1)}% SAVED)`;
+
+      currentExportText = buildExport(exportFmt, currentChunks, currentStats);
+      document.getElementById('exportExtVal').textContent = currentExportFilename.slice(currentExportFilename.lastIndexOf('.'));
+      document.getElementById('nlePreviewBox').textContent = currentExportText;
+
+      renderCanvases(audioLinear, motionThresh);
+    }
+
+    function renderCanvases(audioLinear, motionThresh) {
+      // 1. Render Stream Canvas
+      const sCanvas = document.getElementById('streamCanvas');
+      const sCtx = sCanvas.getContext('2d');
+      const sw = sCanvas.width;
+      const sh = sCanvas.height;
+      sCtx.clearRect(0, 0, sw, sh);
+
+      // Shade active chunks in background
+      currentChunks.forEach(c => {
+        if (c.speed <= 1.05) {
+          const x0 = (c.start_frame / TOTAL_FRAMES) * sw;
+          const x1 = (c.end_frame / TOTAL_FRAMES) * sw;
+          sCtx.fillStyle = 'rgba(16, 185, 129, 0.11)';
+          sCtx.fillRect(x0, 0, x1 - x0, sh);
+        }
+      });
+
+      // Audio RMS waveform (emerald)
+      sCtx.strokeStyle = '#10b981';
+      sCtx.lineWidth = 1.4;
+      sCtx.beginPath();
+      for (let x = 0; x < sw; x++) {
+        const fIdx = Math.min(TOTAL_FRAMES - 1, Math.floor((x / sw) * TOTAL_FRAMES));
+        const y = sh - 16 - Math.min(1, audioStream[fIdx] * 1.4) * (sh - 34);
+        if (x === 0) sCtx.moveTo(x, y);
+        else sCtx.lineTo(x, y);
+      }
+      sCtx.stroke();
+
+      // Motion stream curve (cyan)
+      sCtx.strokeStyle = '#06b6d4';
+      sCtx.lineWidth = 1.4;
+      sCtx.beginPath();
+      for (let x = 0; x < sw; x++) {
+        const fIdx = Math.min(TOTAL_FRAMES - 1, Math.floor((x / sw) * TOTAL_FRAMES));
+        const y = sh - 16 - Math.min(1, motionStream[fIdx] * 3.8) * (sh - 34);
+        if (x === 0) sCtx.moveTo(x, y);
+        else sCtx.lineTo(x, y);
+      }
+      sCtx.stroke();
+
+      // Audio Threshold Gate Line
+      const aGateY = sh - 16 - Math.min(1, audioLinear * 1.4) * (sh - 34);
+      sCtx.setLineDash([5, 4]);
+      sCtx.strokeStyle = '#f59e0b';
+      sCtx.beginPath();
+      sCtx.moveTo(0, aGateY);
+      sCtx.lineTo(sw, aGateY);
+      sCtx.stroke();
+
+      // Motion Threshold Gate Line
+      const mGateY = sh - 16 - Math.min(1, motionThresh * 3.8) * (sh - 34);
+      sCtx.strokeStyle = '#ec4899';
+      sCtx.beginPath();
+      sCtx.moveTo(0, mGateY);
+      sCtx.lineTo(sw, mGateY);
+      sCtx.stroke();
+      sCtx.setLineDash([]);
+
+      // 2. Render Chunked NLE Timeline Canvas
+      const tCanvas = document.getElementById('timelineCanvas');
+      const tCtx = tCanvas.getContext('2d');
+      const tw = tCanvas.width;
+      const th = tCanvas.height;
+      tCtx.clearRect(0, 0, tw, th);
+
+      tCtx.font = '10px JetBrains Mono, monospace';
+      tCtx.fillStyle = '#a3a3a3';
+      tCtx.fillText('SOURCE TIMELINE (60.0s UNEDITED — EMERALD = KEEP 1.0x | ROSE = CUT | VIOLET = TIMELAPSE)', 12, 16);
+
+      currentChunks.forEach(c => {
+        const x = (c.start_frame / TOTAL_FRAMES) * (tw - 24) + 12;
+        const w = Math.max(1.5, ((c.end_frame - c.start_frame) / TOTAL_FRAMES) * (tw - 24));
+        if (c.speed > 1000) {
+          tCtx.fillStyle = 'rgba(244, 63, 94, 0.28)';
+        } else if (c.speed > 1.05) {
+          tCtx.fillStyle = '#8b5cf6';
+        } else {
+          tCtx.fillStyle = '#10b981';
+        }
+        tCtx.fillRect(x, 24, w, 34);
+      });
+
+      // Bottom Track: Compacted NLE Output Spine
+      tCtx.fillStyle = '#a3a3a3';
+      tCtx.fillText(`COMPACTED OUTPUT SPINE (${currentStats.edited_duration_sec.toFixed(2)}s — ${currentStats.percent_saved.toFixed(1)}% SILENCE REMOVED)`, 12, 82);
+
+      const editedMaxWidth = ((currentStats.edited_frames / TOTAL_FRAMES) * (tw - 24));
+      let outCursor = 12;
+      currentChunks.forEach((c, idx) => {
+        if (c.speed > 1000) return;
+        const outFrames = Math.round((c.end_frame - c.start_frame) / c.speed);
+        const w = (outFrames / TOTAL_FRAMES) * (tw - 24);
+        tCtx.fillStyle = c.speed > 1.05 ? '#8b5cf6' : (idx % 2 === 0 ? '#10b981' : '#059669');
+        tCtx.fillRect(outCursor, 90, Math.max(2, w - 1), 36);
+        outCursor += w;
+      });
+
+      // Saved time region indicator
+      if (outCursor < tw - 16) {
+        tCtx.strokeStyle = 'rgba(6, 182, 212, 0.6)';
+        tCtx.strokeRect(outCursor + 2, 90, (tw - 12) - (outCursor + 2), 36);
+        tCtx.fillStyle = '#06b6d4';
+        tCtx.fillText(`← SAVED ${currentStats.time_saved_sec.toFixed(1)}s (${currentStats.percent_saved.toFixed(1)}%)`, outCursor + 10, 112);
+      }
+    }
+
+    // Event listeners
+    ['presetSelect', 'exprSelect', 'audioThreshRange', 'motionThreshRange', 'marginRange', 'silentSpeedSelect', 'exportFormatSelect'].forEach(id => {
+      document.getElementById(id).addEventListener('input', runPipeline);
+      document.getElementById(id).addEventListener('change', runPipeline);
+    });
+
+    document.getElementById('downloadExportBtn').addEventListener('click', () => {
+      const blob = new Blob([currentExportText], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.download = currentExportFilename;
+      a.href = URL.createObjectURL(blob);
+      a.click();
+    });
+
+    document.getElementById('downloadStatsBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(currentStats, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.download = 'auto_editor_stats.json';
+      a.href = URL.createObjectURL(blob);
+      a.click();
+    });
+
+    runPipeline();
+  </script>
+</body>
+</html>
