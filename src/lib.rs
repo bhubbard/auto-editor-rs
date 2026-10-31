@@ -14,8 +14,9 @@ pub mod render;
 pub mod timeline;
 
 pub use audio::{
-    compute_lufs, compute_lufs_integrated, compute_peak, compute_rms, compute_vad_probability,
-    is_audio_active, parse_wav_pcm, AudioThreshold, BiquadFilter, KWeightFilter, WavAudio,
+    compute_lufs, compute_lufs_bs1770, compute_lufs_integrated, compute_peak, compute_rms,
+    compute_vad_probability, compute_vad_probability_fast, is_audio_active, parse_wav_pcm,
+    AudioThreshold, BiquadFilter, KWeightFilter, WavAudio,
 };
 pub use exports::{export_timeline, ExportFormat};
 pub use expr::{EditExpr, EditMethod};

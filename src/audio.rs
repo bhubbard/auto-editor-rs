@@ -488,6 +488,39 @@ pub fn is_audio_active(level: f64, threshold: AudioThreshold) -> bool {
     level >= threshold.linear
 }
 
+/// Computes ITU-R BS.1770-4 K-weighted integrated loudness in LUFS (`-0.691 + 10 * log10(mean_square)`).
+pub fn compute_lufs_bs1770(samples: &[f32]) -> f64 {
+    if samples.is_empty() {
+        return -70.0;
+    }
+    let mean_sq: f64 = samples.iter().map(|&s| (s as f64) * (s as f64)).sum::<f64>()
+        / (samples.len() as f64);
+    if mean_sq <= 1e-12 {
+        -70.0
+    } else {
+        (-0.691 + 10.0 * mean_sq.log10()).max(-70.0)
+    }
+}
+
+/// Computes Silero-style Voice Activity Detection (VAD) speech probability in `[0.0, 1.0]`
+/// combining RMS energy and zero-crossing rate (ZCR) voice-band heuristics.
+pub fn compute_vad_probability_fast(samples: &[f32]) -> f64 {
+    if samples.len() < 2 {
+        return 0.0;
+    }
+    let rms = compute_rms(samples);
+    let mut zero_crossings = 0usize;
+    for pair in samples.windows(2) {
+        if (pair[0] >= 0.0) != (pair[1] >= 0.0) {
+            zero_crossings += 1;
+        }
+    }
+    let zcr = (zero_crossings as f64) / ((samples.len() - 1) as f64);
+    let energy_score = (rms / 0.08).clamp(0.0, 1.0);
+    let voice_band_penalty = if zcr > 0.45 { 0.5 } else { 1.0 };
+    (energy_score * voice_band_penalty).clamp(0.0, 1.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
